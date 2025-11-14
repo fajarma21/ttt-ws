@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer, WebSocket, type VerifyClientCallbackAsync } from 'ws';
 import {
   getAvailableRooms,
   randomIdNumber,
@@ -24,15 +24,17 @@ import {
 } from './index.constants';
 import { Room } from './types';
 
+// add verivy client
+
 const wsHandleError = (e: Error) => {
   console.log(e);
 };
 
-const wsConfigure = (port: number) => {
+const wsConfigure = (port: number, verifyClient: VerifyClientCallbackAsync) => {
   let room: Room[] = [];
   let users: number[] = [];
 
-  const wss = new WebSocketServer({ port });
+  const wss = new WebSocketServer({ port, verifyClient });
 
   wss.on('connection', (ws) => {
     ws.on('error', wsHandleError);
