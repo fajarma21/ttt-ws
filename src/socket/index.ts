@@ -1,9 +1,9 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer, WebSocket } from 'ws';
 import {
   getAvailableRooms,
   randomIdNumber,
   randomRoomNumber,
-} from "./index.helpers";
+} from './index.helpers';
 import {
   GAME_STATUS_CREATE,
   GAME_STATUS_FIND,
@@ -21,8 +21,8 @@ import {
   ROOM_STATUS_FINISH_BREAK,
   ROOM_STATUS_FULL,
   ROOM_STATUS_ONE_READY,
-} from "./index.constants";
-import { Room } from "./types";
+} from './index.constants';
+import { Room } from './types';
 
 const wsHandleError = (e: Error) => {
   console.log(e);
@@ -34,8 +34,8 @@ const wsConfigure = (port: number) => {
 
   const wss = new WebSocketServer({ port });
 
-  wss.on("connection", (ws) => {
-    ws.on("error", wsHandleError);
+  wss.on('connection', (ws) => {
+    ws.on('error', wsHandleError);
 
     let newUserId = randomRoomNumber();
     while (users.some((item) => item === newUserId)) {
@@ -49,7 +49,7 @@ const wsConfigure = (port: number) => {
     };
     ws.send(JSON.stringify(initData));
 
-    ws.on("message", (msg) => {
+    ws.on('message', (msg) => {
       const { type, user, value } = JSON.parse(msg.valueOf().toString());
       let broadcastData = null;
 
@@ -96,7 +96,17 @@ const wsConfigure = (port: number) => {
           value: JSON.stringify(getAvailableRooms(room)),
         });
       } else if (type === GAME_STATUS_READY) {
-        const { roomId } = JSON.parse(value);
+        const { roomId, winnerId } = JSON.parse(value);
+        const roomData = room.find((item) => item.id === roomId);
+        if (!roomData) return;
+
+        const isOneReady = roomData.status === ROOM_STATUS_ONE_READY;
+
+        const randomMark = Math.ceil(Math.random() * 10);
+        const marks = roomData.user.map((item, index) => ({
+          id: item,
+          mark: randomMark + index,
+        }));
 
         room = room.map((item) => {
           if (item.id === roomId) {
@@ -111,31 +121,22 @@ const wsConfigure = (port: number) => {
           return item;
         });
 
-        const roomData = room.find((item) => item.id === roomId);
-        if (!roomData) return;
-
-        const isAllReady = roomData.status === ROOM_STATUS_ONE_READY;
-
-        const randomMark = Math.ceil(Math.random() * 10);
-        const marks = roomData.user.map((item, index) => ({
-          id: item,
-          mark: randomMark + index,
-        }));
-
         broadcastData = JSON.stringify({
           type: GAME_STATUS_READY,
           user,
           room: roomId,
-          roomStatus: isAllReady
+          roomStatus: isOneReady
             ? ROOM_STATUS_ALL_READY
             : ROOM_STATUS_ONE_READY,
           value: JSON.stringify(
-            isAllReady
+            isOneReady
               ? {
                   marks,
                   firstTurn: Math.ceil(Math.random() * 2),
                 }
-              : {}
+              : {
+                  winnerId,
+                }
           ),
         });
       } else if (type === GAME_STATUS_MARKING) {
@@ -154,7 +155,7 @@ const wsConfigure = (port: number) => {
           user,
           room: roomId,
           roomStatus: ROOM_STATUS_ALL_READY,
-          value: "{}",
+          value: '{}',
         });
       } else if (type === GAME_STATUS_FINISH) {
         const { roomId } = JSON.parse(value);
@@ -244,8 +245,8 @@ const wsConfigure = (port: number) => {
       }
     });
 
-    ws.on("close", () => {
-      console.log("connection closed!");
+    ws.on('close', () => {
+      console.log('connection closed!');
     });
   });
 };
